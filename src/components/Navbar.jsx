@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FiMoon, FiMenu, FiX, FiArrowUpRight } from 'react-icons/fi';
@@ -10,6 +10,33 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const isHomePage = location.pathname === '/';
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    const handleOutsideClickOrScroll = (e) => {
+      if (e.target.closest('#menu-toggle')) return;
+
+      if (isOpen && menuRef.current && !menuRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    const handleScroll = () => {
+      if (isOpen) setIsOpen(false);
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleOutsideClickOrScroll);
+      document.addEventListener('touchstart', handleOutsideClickOrScroll);
+      window.addEventListener('scroll', handleScroll, { passive: true });
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClickOrScroll);
+      document.removeEventListener('touchstart', handleOutsideClickOrScroll);
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -56,6 +83,20 @@ const Navbar = () => {
     { label: 'About', id: 'about' },
     { label: 'Contact', id: 'contact' },
   ];
+
+  const handleMobileNavClick = (e, targetId) => {
+    e.preventDefault();
+    setIsOpen(false);
+
+    setTimeout(() => {
+      const element = document.getElementById(targetId);
+      if (element) {
+        const headerOffset = 80;
+        const y = element.getBoundingClientRect().top + window.scrollY - headerOffset;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+      }
+    }, 150);
+  };
 
   return (
     <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled ? 'py-3' : 'py-6'}`}>
@@ -117,6 +158,7 @@ const Navbar = () => {
               <FiMoon className="text-sm" />
             </button>
             <button 
+              id="menu-toggle"
               onClick={() => setIsOpen(!isOpen)}
               className="p-2.5 rounded-full bg-white/5 border border-white/10 text-slate-200 hover:text-white cursor-pointer"
             >
@@ -130,33 +172,34 @@ const Navbar = () => {
       <AnimatePresence>
         {isOpen && (
           <motion.div 
+            ref={menuRef}
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.2 }}
-            className="absolute top-24 left-4 right-4 z-40 md:hidden bg-slate-950/95 border border-white/10 p-6 rounded-3xl backdrop-blur-2xl shadow-2xl"
+            className="absolute top-full left-0 right-0 mx-auto mt-4 w-[92vw] max-w-sm bg-[#0a0a0a]/95 backdrop-blur-md border border-white/10 rounded-2xl p-6 shadow-2xl flex flex-col gap-2 transform-gpu origin-top transition-all duration-300 z-50"
           >
-            <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-1">
               {navLinks.map((link, idx) => (
                 <motion.button
                   initial={{ opacity: 0, x: -10 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: idx * 0.05 }}
-                  onClick={() => scrollTo(link.id)}
+                  onClick={(e) => handleMobileNavClick(e, link.id)}
                   key={link.label}
-                  className={`text-left text-lg font-medium px-4 py-2.5 rounded-2xl cursor-pointer ${
+                  className={`block w-full text-left px-4 py-3 text-lg font-medium rounded-xl transition-all duration-200 active:scale-[0.98] ${
                     activeSection === link.id 
-                    ? 'bg-gradient-to-r from-violet-600/20 to-indigo-600/20 text-indigo-400 border border-indigo-500/20' 
-                    : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                    ? 'bg-white/10 text-white' 
+                    : 'text-gray-400 hover:text-white hover:bg-white/10'
                   }`}
                 >
                   {link.label}
                 </motion.button>
               ))}
-              <div className="h-px bg-white/10 my-2" />
+              <div className="h-px w-full bg-white/10 my-2"></div>
               <button 
-                onClick={() => scrollTo('contact')}
-                className="w-full py-4 rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold text-sm tracking-wide shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+                onClick={(e) => handleMobileNavClick(e, 'contact')}
+                className="mt-2 w-full py-3 px-6 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-semibold rounded-xl hover:shadow-[0_0_20px_rgba(147,51,234,0.4)] hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 flex justify-center items-center gap-2 cursor-pointer"
               >
                 <span>Let's Connect</span>
                 <FiArrowUpRight className="text-xs" />
